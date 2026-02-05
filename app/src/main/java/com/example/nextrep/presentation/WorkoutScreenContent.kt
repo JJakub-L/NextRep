@@ -27,23 +27,18 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.nextrep.domain.models.Exercise
-import com.example.nextrep.domain.models.ExerciseSet
-import com.example.nextrep.domain.models.SetType
-import com.example.nextrep.domain.models.Workout
+import com.example.nextrep.domain.models.*
 import com.example.nextrep.ui.theme.*
 
 @Composable
-fun WorkoutScreenContent(viewModel: WorkoutViewModel) {
-    val workout = viewModel.workouts.value.firstOrNull()
+fun WorkoutScreenContent(viewModel: WorkoutViewModel, workout: Workout?) {
     val context = LocalContext.current
 
     if (workout == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Brak planu treningowego", color = Color.White)
+            Text("Brak planu treningowego na dziś", color = Color.White)
         }
     } else {
-        // ZMIANA: Czytamy .value - teraz ekran wie natychmiast, że skończyłeś!
         if (workout.isCompleted.value) {
             SuccessScreen(workoutName = workout.name)
         } else {
@@ -57,7 +52,7 @@ fun ActiveWorkoutScreen(workout: Workout, viewModel: WorkoutViewModel, context: 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .imePadding() // <--- FIX: To sprawia, że lista ucieka przed klawiaturą!
+            .imePadding()
             .padding(16.dp),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
@@ -82,7 +77,6 @@ fun ActiveWorkoutScreen(workout: Workout, viewModel: WorkoutViewModel, context: 
         item {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Czytamy .value
             val allDone = workout.exercises.all { it.isCompleted.value }
 
             Button(
@@ -105,10 +99,6 @@ fun ActiveWorkoutScreen(workout: Workout, viewModel: WorkoutViewModel, context: 
         }
     }
 }
-
-// Reszta kodu (ExerciseCard, SetRow, SmallInput, SuccessScreen) zostaje TAKA SAMA jak ostatnio.
-// Skopiuj ExerciseCard z poprzedniej odpowiedzi, jeśli go tu nie widzisz.
-// Wklejam je poniżej dla 100% pewności, że nic nie zginie:
 
 @Composable
 fun ExerciseCard(exercise: Exercise, viewModel: WorkoutViewModel, context: android.content.Context) {
@@ -140,16 +130,21 @@ fun ExerciseCard(exercise: Exercise, viewModel: WorkoutViewModel, context: andro
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(modifier = Modifier.fillMaxWidth()) {
-                Text("Seria", modifier = Modifier.weight(1.2f), color = GreyText, fontSize = 12.sp)
+                Text("Seria", modifier = Modifier.weight(1f), color = GreyText, fontSize = 12.sp)
                 Text("Cel", modifier = Modifier.weight(1.5f), color = GreyText, fontSize = 12.sp)
-                Text("kg", modifier = Modifier.weight(1f), color = GreyText, fontSize = 12.sp)
-                Text("Powt.", modifier = Modifier.weight(1f), color = GreyText, fontSize = 12.sp)
+
+                if (exercise.type == ExerciseType.TIME) {
+                    Text("Czas (sekundy)", modifier = Modifier.weight(2f), color = GreyText, fontSize = 12.sp)
+                } else {
+                    Text("kg", modifier = Modifier.weight(1f), color = GreyText, fontSize = 12.sp)
+                    Text("Powt.", modifier = Modifier.weight(1f), color = GreyText, fontSize = 12.sp)
+                }
             }
             Spacer(modifier = Modifier.height(8.dp))
 
             exercise.sets.forEach { set ->
                 key(set.id) {
-                    SetRow(set, isDone)
+                    SetRow(exercise, set, isDone)
                 }
             }
 
@@ -186,12 +181,9 @@ fun ExerciseCard(exercise: Exercise, viewModel: WorkoutViewModel, context: andro
 }
 
 @Composable
-fun SetRow(set: ExerciseSet, isReadOnly: Boolean) {
+fun SetRow(exercise: Exercise, set: ExerciseSet, isReadOnly: Boolean) {
     val rowColor = if (set.type == SetType.WARMUP) Color(0xFF2C2C2C) else Color.Transparent
     val labelColor = if (set.type == SetType.WARMUP) Color(0xFFE0E0E0) else BrightGreen
-
-    val weightState = set.weightInput
-    val repsState = set.repsInput
 
     Row(
         modifier = Modifier
@@ -208,8 +200,12 @@ fun SetRow(set: ExerciseSet, isReadOnly: Boolean) {
             if (set.type == SetType.WORKING) Text("RIR: ${set.targetRir}", color = GreyText, fontSize = 10.sp)
         }
 
-        SmallInput(weightState, isReadOnly, Modifier.weight(1f).padding(end = 4.dp))
-        SmallInput(repsState, isReadOnly, Modifier.weight(1f))
+        if (exercise.type == ExerciseType.TIME) {
+            SmallInput(set.timeInput, isReadOnly, Modifier.weight(2f))
+        } else {
+            SmallInput(set.weightInput, isReadOnly, Modifier.weight(1f).padding(end = 4.dp))
+            SmallInput(set.repsInput, isReadOnly, Modifier.weight(1f))
+        }
     }
 }
 

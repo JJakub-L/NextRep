@@ -10,6 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nextrep.ui.theme.GymBlack
+import com.example.nextrep.domain.models.DayOfWeek // WAŻNE: Dodaj ten import
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -22,22 +23,38 @@ enum class AppScreen {
 fun MainScreen(viewModel: WorkoutViewModel) {
     var currentScreen by remember { mutableStateOf(AppScreen.Training) }
 
-    // TO JEST TO MIEJSCE O KTÓRE PYTAŁEŚ:
+    // --- LOGIKA KROKU 4 (Obliczamy tutaj) ---
+    val todayDate = LocalDate.now()
+
+    // Mapujemy DayOfWeek z Javy/Kotlin na Twój Enum
+    val currentDay = when(todayDate.dayOfWeek) {
+        java.time.DayOfWeek.MONDAY -> DayOfWeek.MONDAY
+        java.time.DayOfWeek.TUESDAY -> DayOfWeek.TUESDAY
+        java.time.DayOfWeek.WEDNESDAY -> DayOfWeek.WEDNESDAY
+        java.time.DayOfWeek.THURSDAY -> DayOfWeek.THURSDAY
+        java.time.DayOfWeek.FRIDAY -> DayOfWeek.FRIDAY
+        java.time.DayOfWeek.SATURDAY -> DayOfWeek.SATURDAY
+        java.time.DayOfWeek.SUNDAY -> DayOfWeek.SUNDAY
+    }
+
+    // Szukamy planu na dziś w ViewModelu
+    val workoutForToday = viewModel.workoutPlans.value.find {
+        it.scheduledDays.contains(currentDay)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(GymBlack) // <--- Tu jest ustawione tło pod całą aplikacją
+            .background(GymBlack)
     ) {
-
         // --- 1. GÓRNY PANEL ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFF1B5E20))
         ) {
-            val today = LocalDate.now()
             val formatter = DateTimeFormatter.ofPattern("EEEE, dd.MM.yyyy", Locale("pl", "PL"))
-            val dateString = today.format(formatter)
+            val dateString = todayDate.format(formatter)
 
             Column(
                 modifier = Modifier
@@ -49,15 +66,17 @@ fun MainScreen(viewModel: WorkoutViewModel) {
                     color = Color.White.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.bodyMedium
                 )
+
+                // ZMIANA: Wyświetlamy nazwę dzisiejszego treningu lub informację o wolnym
                 Text(
-                    text = "Trening: Klatka A",
+                    text = workoutForToday?.name ?: "Dzień odpoczynku ☕",
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 22.sp
                 )
+
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    // TUTAJ ZMIANA: Pobieramy wartość z viewModelu
                     text = "Streak: 🔥 ${viewModel.streak.value} dni",
                     color = Color.Yellow,
                     fontWeight = FontWeight.Bold
@@ -92,8 +111,11 @@ fun MainScreen(viewModel: WorkoutViewModel) {
         Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
             when (currentScreen) {
                 AppScreen.Progress -> ProgressScreen()
-                AppScreen.Training -> WorkoutScreenContent(viewModel)
-                AppScreen.AddPlan -> AddPlanScreen()
+
+                // ZMIANA: Przekazujemy workoutForToday do ekranu treningu
+                AppScreen.Training -> WorkoutScreenContent(viewModel, workoutForToday)
+
+                AppScreen.AddPlan -> AddWorkoutScreen(viewModel)
             }
         }
     }
