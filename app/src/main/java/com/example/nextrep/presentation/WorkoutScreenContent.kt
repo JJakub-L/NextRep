@@ -70,7 +70,7 @@ fun ActiveWorkoutScreen(workout: Workout, viewModel: WorkoutViewModel, context: 
             items = workout.exercises,
             key = { it.id }
         ) { exercise ->
-            ExerciseCard(exercise, viewModel, context)
+            ExerciseCard(workout, exercise, viewModel, context)
             Spacer(modifier = Modifier.height(16.dp))
         }
 
@@ -101,7 +101,7 @@ fun ActiveWorkoutScreen(workout: Workout, viewModel: WorkoutViewModel, context: 
 }
 
 @Composable
-fun ExerciseCard(exercise: Exercise, viewModel: WorkoutViewModel, context: android.content.Context) {
+fun ExerciseCard(workout: Workout, exercise: Exercise, viewModel: WorkoutViewModel, context: android.content.Context) {
     val isDone = exercise.isCompleted
 
     val cardBg = if (isDone) Color(0xFF1B301B) else GymCard
@@ -144,7 +144,7 @@ fun ExerciseCard(exercise: Exercise, viewModel: WorkoutViewModel, context: andro
 
             exercise.sets.forEach { set ->
                 key(set.id) {
-                    SetRow(exercise, set, isDone)
+                    SetRow(workout, exercise, set, isDone, viewModel)
                 }
             }
 
@@ -153,11 +153,11 @@ fun ExerciseCard(exercise: Exercise, viewModel: WorkoutViewModel, context: andro
             Button(
                 onClick = {
                     if (isDone) {
-                        viewModel.toggleExerciseCompletion(exercise)
+                        viewModel.toggleExerciseCompletion(workout, exercise)
                     } else {
                         val error = viewModel.validateExercise(exercise)
                         if (error == null) {
-                            viewModel.toggleExerciseCompletion(exercise)
+                            viewModel.toggleExerciseCompletion(workout, exercise)
                         } else {
                             Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
                         }
@@ -181,7 +181,7 @@ fun ExerciseCard(exercise: Exercise, viewModel: WorkoutViewModel, context: andro
 }
 
 @Composable
-fun SetRow(exercise: Exercise, set: ExerciseSet, isReadOnly: Boolean) {
+fun SetRow(workout: Workout, exercise: Exercise, set: ExerciseSet, isReadOnly: Boolean, viewModel: WorkoutViewModel) {
     val rowColor = if (set.type == SetType.WARMUP) Color(0xFF2C2C2C) else Color.Transparent
     val labelColor = if (set.type == SetType.WARMUP) Color(0xFFE0E0E0) else BrightGreen
 
@@ -201,27 +201,39 @@ fun SetRow(exercise: Exercise, set: ExerciseSet, isReadOnly: Boolean) {
         }
 
         if (exercise.type == ExerciseType.TIME) {
-            SmallInput(set.timeInput, { set.timeInput = it }, isReadOnly, Modifier.weight(2f))
+            SmallInput(
+                value = set.timeInput, 
+                onValueChange = { viewModel.updateSetInput(workout, exercise, set, time = it) }, 
+                isReadOnly = isReadOnly, 
+                modifier = Modifier.weight(2f)
+            )
         } else {
-            SmallInput(set.weightInput, { set.weightInput = it }, isReadOnly, Modifier.weight(1f).padding(end = 4.dp))
-            SmallInput(set.repsInput, { set.repsInput = it }, isReadOnly, Modifier.weight(1f))
+            SmallInput(
+                value = set.weightInput, 
+                onValueChange = { viewModel.updateSetInput(workout, exercise, set, weight = it) }, 
+                isReadOnly = isReadOnly, 
+                modifier = Modifier.weight(1f).padding(end = 4.dp)
+            )
+            SmallInput(
+                value = set.repsInput, 
+                onValueChange = { viewModel.updateSetInput(workout, exercise, set, reps = it) }, 
+                isReadOnly = isReadOnly, 
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
 
 @Composable
 fun SmallInput(value: String, onValueChange: (String) -> Unit, isReadOnly: Boolean, modifier: Modifier = Modifier) {
-    var text by remember(value) { mutableStateOf(value) }
-
     Box(
         modifier = modifier.height(35.dp).background(Color(0xFF121212), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         BasicTextField(
-            value = text,
+            value = value,
             onValueChange = { 
                 if (!isReadOnly) {
-                    text = it
                     onValueChange(it)
                 }
             },
