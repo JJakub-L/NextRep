@@ -10,7 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nextrep.ui.theme.GymBlack
-import com.example.nextrep.domain.models.DayOfWeek // WAŻNE: Dodaj ten import
+import com.example.nextrep.domain.models.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -22,11 +22,13 @@ enum class AppScreen {
 @Composable
 fun MainScreen(viewModel: WorkoutViewModel) {
     var currentScreen by remember { mutableStateOf(AppScreen.Training) }
+    
+    // Obserwujemy plany treningowe jako stan Compose
+    val workoutPlans by viewModel.workoutPlans.collectAsState()
 
-    // --- LOGIKA KROKU 4 (Obliczamy tutaj) ---
+    // --- LOGIKA KROKU 4 ---
     val todayDate = LocalDate.now()
 
-    // Mapujemy DayOfWeek z Javy/Kotlin na Twój Enum
     val currentDay = when(todayDate.dayOfWeek) {
         java.time.DayOfWeek.MONDAY -> DayOfWeek.MONDAY
         java.time.DayOfWeek.TUESDAY -> DayOfWeek.TUESDAY
@@ -37,8 +39,8 @@ fun MainScreen(viewModel: WorkoutViewModel) {
         java.time.DayOfWeek.SUNDAY -> DayOfWeek.SUNDAY
     }
 
-    // Szukamy planu na dziś w ViewModelu
-    val workoutForToday = viewModel.workoutPlans.value.find {
+    // Szukamy planu na dziś w zaobserwowanym stanie
+    val workoutForToday = workoutPlans.find {
         it.scheduledDays.contains(currentDay)
     }
 
@@ -67,7 +69,6 @@ fun MainScreen(viewModel: WorkoutViewModel) {
                     style = MaterialTheme.typography.bodyMedium
                 )
 
-                // ZMIANA: Wyświetlamy nazwę dzisiejszego treningu lub informację o wolnym
                 Text(
                     text = workoutForToday?.name ?: "Dzień odpoczynku ☕",
                     color = Color.White,
@@ -111,10 +112,7 @@ fun MainScreen(viewModel: WorkoutViewModel) {
         Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
             when (currentScreen) {
                 AppScreen.Progress -> ProgressScreen()
-
-                // ZMIANA: Przekazujemy workoutForToday do ekranu treningu
                 AppScreen.Training -> WorkoutScreenContent(viewModel, workoutForToday)
-
                 AppScreen.AddPlan -> AddWorkoutScreen(viewModel)
             }
         }

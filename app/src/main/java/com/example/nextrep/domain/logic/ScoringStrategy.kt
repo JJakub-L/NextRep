@@ -11,9 +11,8 @@ class VolumeStrategy : ScoringStrategy {
         var totalVolume = 0.0
         workout.exercises.forEach { exercise ->
             exercise.sets.forEach { set ->
-                // ZMIANA: Dodaliśmy .value
-                val weight = set.weightInput.value.toDoubleOrNull() ?: 0.0
-                val reps = set.repsInput.value.toIntOrNull() ?: 0
+                val weight = set.weightInput.toDoubleOrNull() ?: 0.0
+                val reps = set.repsInput.toIntOrNull() ?: 0
 
                 totalVolume += (weight * reps)
             }
@@ -27,9 +26,8 @@ class FeelingStrategy : ScoringStrategy {
         var totalScore = 0.0
         workout.exercises.forEach { exercise ->
             exercise.sets.forEach { set ->
-                // ZMIANA: Dodaliśmy .value
-                val weight = set.weightInput.value.toDoubleOrNull() ?: 0.0
-                val reps = set.repsInput.value.toIntOrNull() ?: 0
+                val weight = set.weightInput.toDoubleOrNull() ?: 0.0
+                val reps = set.repsInput.toIntOrNull() ?: 0
 
                 if (weight > 0 && reps > 0) {
                     totalScore += (weight * reps * 1.2)

@@ -47,6 +47,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
 
+    // GSON
+    implementation(libs.gson)
+
     // ROOM (Baza danych)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

@@ -30,6 +30,9 @@ fun AddWorkoutScreen(viewModel: WorkoutViewModel) {
     val selectedDays = remember { mutableStateListOf<DayOfWeek>() }
     val exercises = remember { mutableStateListOf<Exercise>() }
     val context = androidx.compose.ui.platform.LocalContext.current
+    
+    // Obserwujemy plany jako stan Compose
+    val workoutPlans by viewModel.workoutPlans.collectAsState()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -139,7 +142,8 @@ fun AddWorkoutScreen(viewModel: WorkoutViewModel) {
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        items(viewModel.workoutPlans.value) { plan ->
+        // Używamy zaobserwowanej listy planów
+        items(workoutPlans) { plan ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 colors = CardDefaults.cardColors(containerColor = GymCard.copy(alpha = 0.6f))
@@ -155,7 +159,6 @@ fun AddWorkoutScreen(viewModel: WorkoutViewModel) {
                         selectedDays.clear()
                         selectedDays.addAll(plan.scheduledDays)
                         exercises.clear()
-                        // Tworzymy kopie ćwiczeń, żeby nie edytować oryginałów bezpośrednio przed zapisem
                         exercises.addAll(plan.exercises.map { it.copy() })
                     }) {
                         Text("EDYTUJ", color = Color.Yellow)
@@ -174,7 +177,6 @@ fun ExerciseEditCard(exercise: Exercise, onDelete: () -> Unit) {
     var reps by remember { mutableStateOf(exercise.defaultReps) }
     var rir by remember { mutableStateOf(exercise.defaultRir) }
 
-    // Synchronizacja stanu w górę
     LaunchedEffect(name, type, series, reps, rir) {
         exercise.name = name
         exercise.type = type

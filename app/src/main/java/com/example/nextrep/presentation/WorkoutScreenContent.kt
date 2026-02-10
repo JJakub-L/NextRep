@@ -39,7 +39,7 @@ fun WorkoutScreenContent(viewModel: WorkoutViewModel, workout: Workout?) {
             Text("Brak planu treningowego na dziś", color = Color.White)
         }
     } else {
-        if (workout.isCompleted.value) {
+        if (workout.isCompleted) {
             SuccessScreen(workoutName = workout.name)
         } else {
             ActiveWorkoutScreen(workout, viewModel, context)
@@ -77,7 +77,7 @@ fun ActiveWorkoutScreen(workout: Workout, viewModel: WorkoutViewModel, context: 
         item {
             Spacer(modifier = Modifier.height(16.dp))
 
-            val allDone = workout.exercises.all { it.isCompleted.value }
+            val allDone = workout.exercises.all { it.isCompleted }
 
             Button(
                 enabled = allDone,
@@ -102,7 +102,7 @@ fun ActiveWorkoutScreen(workout: Workout, viewModel: WorkoutViewModel, context: 
 
 @Composable
 fun ExerciseCard(exercise: Exercise, viewModel: WorkoutViewModel, context: android.content.Context) {
-    val isDone = exercise.isCompleted.value
+    val isDone = exercise.isCompleted
 
     val cardBg = if (isDone) Color(0xFF1B301B) else GymCard
     val border = if (isDone) BorderStroke(2.dp, GorillaGreen) else null
@@ -201,23 +201,30 @@ fun SetRow(exercise: Exercise, set: ExerciseSet, isReadOnly: Boolean) {
         }
 
         if (exercise.type == ExerciseType.TIME) {
-            SmallInput(set.timeInput, isReadOnly, Modifier.weight(2f))
+            SmallInput(set.timeInput, { set.timeInput = it }, isReadOnly, Modifier.weight(2f))
         } else {
-            SmallInput(set.weightInput, isReadOnly, Modifier.weight(1f).padding(end = 4.dp))
-            SmallInput(set.repsInput, isReadOnly, Modifier.weight(1f))
+            SmallInput(set.weightInput, { set.weightInput = it }, isReadOnly, Modifier.weight(1f).padding(end = 4.dp))
+            SmallInput(set.repsInput, { set.repsInput = it }, isReadOnly, Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-fun SmallInput(state: MutableState<String>, isReadOnly: Boolean, modifier: Modifier = Modifier) {
+fun SmallInput(value: String, onValueChange: (String) -> Unit, isReadOnly: Boolean, modifier: Modifier = Modifier) {
+    var text by remember(value) { mutableStateOf(value) }
+
     Box(
         modifier = modifier.height(35.dp).background(Color(0xFF121212), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         BasicTextField(
-            value = state.value,
-            onValueChange = { if (!isReadOnly) state.value = it },
+            value = text,
+            onValueChange = { 
+                if (!isReadOnly) {
+                    text = it
+                    onValueChange(it)
+                }
+            },
             enabled = !isReadOnly,
             textStyle = TextStyle(
                 color = if (isReadOnly) Color.Gray else Color.White,

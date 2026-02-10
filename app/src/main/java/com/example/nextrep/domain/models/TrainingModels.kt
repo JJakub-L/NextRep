@@ -1,8 +1,8 @@
 package com.example.nextrep.domain.models
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import java.util.UUID
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
 enum class SetType { WARMUP, WORKING }
 
@@ -21,10 +21,10 @@ data class ExerciseSet(
     val type: SetType = SetType.WORKING,
     val targetReps: String,
     val targetRir: String,
-    var weightInput: MutableState<String> = mutableStateOf(""),
-    var repsInput: MutableState<String> = mutableStateOf(""),
-    var timeInput: MutableState<String> = mutableStateOf(""), // Dla planków
-    var isCompleted: MutableState<Boolean> = mutableStateOf(false)
+    var weightInput: String = "",
+    var repsInput: String = "",
+    var timeInput: String = "", // Dla planków
+    var isCompleted: Boolean = false
 )
 
 data class Exercise(
@@ -32,7 +32,7 @@ data class Exercise(
     var name: String,
     var type: ExerciseType = ExerciseType.REPS_AND_WEIGHT,
     val sets: MutableList<ExerciseSet> = mutableListOf(),
-    var isCompleted: MutableState<Boolean> = mutableStateOf(false),
+    var isCompleted: Boolean = false,
 
     // NOWE POLA DO KREATORA:
     var defaultSeries: String = "3",
@@ -42,12 +42,13 @@ data class Exercise(
     var defaultRest: String = "2 min"
 )
 
+@Entity(tableName = "workout_plans")
 data class Workout(
-    val id: String = UUID.randomUUID().toString(),
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val name: String,
     val dayDescription: String,
     val scheduledDays: Set<DayOfWeek> = emptySet(),
     val exercises: MutableList<Exercise> = mutableListOf(),
-    var isCompleted: MutableState<Boolean> = mutableStateOf(false),
-    var totalScore: MutableState<Double> = mutableStateOf(0.0)
+    var isCompleted: Boolean = false,
+    var totalScore: Double = 0.0
 )

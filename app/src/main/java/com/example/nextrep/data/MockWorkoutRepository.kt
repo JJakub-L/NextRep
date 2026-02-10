@@ -1,6 +1,5 @@
 package com.example.nextrep.data
 
-import androidx.compose.runtime.mutableStateOf
 import com.example.nextrep.domain.WorkoutRepository
 import com.example.nextrep.domain.models.*
 
@@ -30,7 +29,7 @@ class MockWorkoutRepository : WorkoutRepository {
                 ExerciseSet(
                     setNumber = i, type = SetType.WARMUP,
                     targetReps = "5", targetRir = "-",
-                    weightInput = mutableStateOf("100"), repsInput = mutableStateOf("5")
+                    weightInput = "100", repsInput = "5"
                 )
             )
         }
@@ -39,7 +38,7 @@ class MockWorkoutRepository : WorkoutRepository {
                 ExerciseSet(
                     setNumber = i, type = SetType.WORKING,
                     targetReps = "5", targetRir = "2",
-                    weightInput = mutableStateOf(""), repsInput = mutableStateOf("")
+                    weightInput = "", repsInput = ""
                 )
             )
         }
@@ -55,8 +54,6 @@ class MockWorkoutRepository : WorkoutRepository {
             name = "Trening A",
             dayDescription = "Poniedziałek",
             exercises = exercises,
-            // Tu się nic nie zmienia w kodzie, bo domyślna wartość to mutableStateOf(false)
-            // ale dla porządku wiedz, że to teraz MutableState
         )
         workouts.add(trainingA)
     }
@@ -68,7 +65,7 @@ class MockWorkoutRepository : WorkoutRepository {
                 ExerciseSet(
                     setNumber = i, type = SetType.WORKING,
                     targetReps = reps, targetRir = rir,
-                    weightInput = mutableStateOf(""), repsInput = mutableStateOf("")
+                    weightInput = "", repsInput = ""
                 )
             )
         }
