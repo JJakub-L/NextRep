@@ -13,7 +13,6 @@ enum class DayOfWeek(val polishName: String) {
     THURSDAY("Czwartek"), FRIDAY("Piątek"), SATURDAY("Sobota"), SUNDAY("Niedziela")
 }
 
-// Pola z `var` na `val` -> Każda zmiana (np. wpisanie wagi) stworzy nową instancję
 data class ExerciseSet(
     val id: String = UUID.randomUUID().toString(),
     val setNumber: Int,
@@ -23,10 +22,9 @@ data class ExerciseSet(
     val weightInput: String = "",
     val repsInput: String = "",
     val timeInput: String = "",
-    val isCompleted: Boolean = false // To pole też będzie aktualizowane przez .copy()
+    val isCompleted: Boolean = false
 )
 
-// Z `MutableList` na `List`
 data class Exercise(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
@@ -34,7 +32,6 @@ data class Exercise(
     val sets: List<ExerciseSet> = emptyList(),
     val isCompleted: Boolean = false,
 
-    // Pola dla kreatora pozostają `var`, bo są edytowane w formularzu, a nie w stanie "live"
     var defaultSeries: String = "3",
     var defaultReps: String = "10",
     var defaultRir: String = "2",
@@ -42,7 +39,6 @@ data class Exercise(
     var defaultRest: String = "2 min"
 )
 
-// Z `MutableList` na `List`
 @Entity(tableName = "workout_plans")
 data class Workout(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
@@ -51,5 +47,6 @@ data class Workout(
     val scheduledDays: Set<DayOfWeek> = emptySet(),
     val exercises: List<Exercise> = emptyList(),
     val isCompleted: Boolean = false,
-    val totalScore: Double = 0.0
+    val totalScore: Double = 0.0,
+    val completionDate: Long? = null // Nowe pole: Timestamp ukończenia treningu
 )

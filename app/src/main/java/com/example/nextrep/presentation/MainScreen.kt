@@ -75,10 +75,10 @@ fun MainScreen(viewModel: WorkoutViewModel) {
                     fontWeight = FontWeight.Bold,
                     fontSize = 22.sp
                 )
-
+                val currentStreak by viewModel.streak.collectAsState()
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Streak: 🔥 ${viewModel.streak.value} dni",
+                    text = "Streak: 🔥 $currentStreak dni",
                     color = Color.Yellow,
                     fontWeight = FontWeight.Bold
                 )
