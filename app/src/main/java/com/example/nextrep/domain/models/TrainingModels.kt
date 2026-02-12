@@ -27,10 +27,10 @@ data class ExerciseSet(
 
 data class Exercise(
     val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val type: ExerciseType = ExerciseType.REPS_AND_WEIGHT,
-    val sets: List<ExerciseSet> = emptyList(),
-    val isCompleted: Boolean = false,
+    var name: String,
+    var type: ExerciseType = ExerciseType.REPS_AND_WEIGHT,
+    var sets: List<ExerciseSet> = emptyList(),
+    var isCompleted: Boolean = false,
 
     var defaultSeries: String = "3",
     var defaultReps: String = "10",
@@ -48,5 +48,5 @@ data class Workout(
     val exercises: List<Exercise> = emptyList(),
     val isCompleted: Boolean = false,
     val totalScore: Double = 0.0,
-    val completionDate: Long? = null // Nowe pole: Timestamp ukończenia treningu
+    val completionDate: Long? = null
 )
