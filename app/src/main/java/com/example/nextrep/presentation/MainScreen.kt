@@ -25,6 +25,7 @@ fun MainScreen(viewModel: WorkoutViewModel) {
     
     // Obserwujemy plany treningowe jako stan Compose
     val workoutPlans by viewModel.workoutPlans.collectAsState()
+    val summaryData by viewModel.summaryData.collectAsState()
 
     // --- LOGIKA KROKU 4 ---
     val todayDate = LocalDate.now()
@@ -44,77 +45,87 @@ fun MainScreen(viewModel: WorkoutViewModel) {
         it.scheduledDays.contains(currentDay)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(GymBlack)
-    ) {
-        // --- 1. GÓRNY PANEL ---
-        Box(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF1B5E20))
+                .fillMaxSize()
+                .background(GymBlack)
         ) {
-            val formatter = DateTimeFormatter.ofPattern("EEEE, dd.MM.yyyy", Locale("pl", "PL"))
-            val dateString = todayDate.format(formatter)
-
-            Column(
+            // --- 1. GÓRNY PANEL ---
+            Box(
                 modifier = Modifier
-                    .statusBarsPadding()
-                    .padding(16.dp)
+                    .fillMaxWidth()
+                    .background(Color(0xFF1B5E20))
             ) {
-                Text(
-                    text = dateString.replaceFirstChar { it.uppercase() },
-                    color = Color.White.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                val formatter = DateTimeFormatter.ofPattern("EEEE, dd.MM.yyyy", Locale("pl", "PL"))
+                val dateString = todayDate.format(formatter)
 
-                Text(
-                    text = workoutForToday?.name ?: "Dzień odpoczynku ☕",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp
+                Column(
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = dateString.replaceFirstChar { it.uppercase() },
+                        color = Color.White.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Text(
+                        text = workoutForToday?.name ?: "Dzień odpoczynku ☕",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp
+                    )
+                    val currentStreak by viewModel.streak.collectAsState()
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Streak: 🔥 $currentStreak dni",
+                        color = Color.Yellow,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // --- 2. MENU NAWIGACYJNE ---
+            TabRow(
+                selectedTabIndex = currentScreen.ordinal,
+                containerColor = Color(0xFF2E7D32),
+                contentColor = Color.White
+            ) {
+                Tab(
+                    selected = currentScreen == AppScreen.Progress,
+                    onClick = { currentScreen = AppScreen.Progress },
+                    text = { Text("Postęp") }
                 )
-                val currentStreak by viewModel.streak.collectAsState()
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Streak: 🔥 $currentStreak dni",
-                    color = Color.Yellow,
-                    fontWeight = FontWeight.Bold
+                Tab(
+                    selected = currentScreen == AppScreen.Training,
+                    onClick = { currentScreen = AppScreen.Training },
+                    text = { Text("Trening") }
                 )
+                Tab(
+                    selected = currentScreen == AppScreen.AddPlan,
+                    onClick = { currentScreen = AppScreen.AddPlan },
+                    text = { Text("Dodaj") }
+                )
+            }
+
+            // --- 3. TREŚĆ ---
+            Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                when (currentScreen) {
+                    AppScreen.Progress -> ProgressScreen(viewModel)
+                    AppScreen.Training -> WorkoutScreenContent(viewModel, workoutForToday)
+                    AppScreen.AddPlan -> AddWorkoutScreen(viewModel)
+                }
             }
         }
 
-        // --- 2. MENU NAWIGACYJNE ---
-        TabRow(
-            selectedTabIndex = currentScreen.ordinal,
-            containerColor = Color(0xFF2E7D32),
-            contentColor = Color.White
-        ) {
-            Tab(
-                selected = currentScreen == AppScreen.Progress,
-                onClick = { currentScreen = AppScreen.Progress },
-                text = { Text("Postęp") }
+        // --- 4. NAKŁADKA PODSUMOWANIA (OVERLAY) ---
+        summaryData?.let { list ->
+            WorkoutSummaryScreen(
+                comparisonList = list,
+                onDismiss = { viewModel.clearSummary() }
             )
-            Tab(
-                selected = currentScreen == AppScreen.Training,
-                onClick = { currentScreen = AppScreen.Training },
-                text = { Text("Trening") }
-            )
-            Tab(
-                selected = currentScreen == AppScreen.AddPlan,
-                onClick = { currentScreen = AppScreen.AddPlan },
-                text = { Text("Dodaj") }
-            )
-        }
-
-        // --- 3. TREŚĆ ---
-        Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-            when (currentScreen) {
-                AppScreen.Progress -> ProgressScreen()
-                AppScreen.Training -> WorkoutScreenContent(viewModel, workoutForToday)
-                AppScreen.AddPlan -> AddWorkoutScreen(viewModel)
-            }
         }
     }
 }

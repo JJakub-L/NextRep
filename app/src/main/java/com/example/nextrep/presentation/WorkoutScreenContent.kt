@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -201,23 +202,36 @@ fun SetRow(workout: Workout, exercise: Exercise, set: ExerciseSet, isReadOnly: B
         }
 
         if (exercise.type == ExerciseType.TIME) {
+            var timeState by remember(set.id) { mutableStateOf(TextFieldValue(set.timeInput)) }
             SmallInput(
-                value = set.timeInput, 
-                onValueChange = { viewModel.updateSetInput(workout, exercise, set, time = it) }, 
-                isReadOnly = isReadOnly, 
+                value = timeState,
+                onValueChange = { newValue ->
+                    timeState = newValue
+                    viewModel.updateSetInput(workout, exercise, set, time = newValue.text)
+                },
+                isReadOnly = isReadOnly,
                 modifier = Modifier.weight(2f)
             )
         } else {
+            var weightState by remember(set.id) { mutableStateOf(TextFieldValue(set.weightInput)) }
             SmallInput(
-                value = set.weightInput, 
-                onValueChange = { viewModel.updateSetInput(workout, exercise, set, weight = it) }, 
-                isReadOnly = isReadOnly, 
+                value = weightState,
+                onValueChange = { newValue ->
+                    weightState = newValue
+                    viewModel.updateSetInput(workout, exercise, set, weight = newValue.text)
+                },
+                isReadOnly = isReadOnly,
                 modifier = Modifier.weight(1f).padding(end = 4.dp)
             )
+
+            var repsState by remember(set.id) { mutableStateOf(TextFieldValue(set.repsInput)) }
             SmallInput(
-                value = set.repsInput, 
-                onValueChange = { viewModel.updateSetInput(workout, exercise, set, reps = it) }, 
-                isReadOnly = isReadOnly, 
+                value = repsState,
+                onValueChange = { newValue ->
+                    repsState = newValue
+                    viewModel.updateSetInput(workout, exercise, set, reps = newValue.text)
+                },
+                isReadOnly = isReadOnly,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -225,7 +239,12 @@ fun SetRow(workout: Workout, exercise: Exercise, set: ExerciseSet, isReadOnly: B
 }
 
 @Composable
-fun SmallInput(value: String, onValueChange: (String) -> Unit, isReadOnly: Boolean, modifier: Modifier = Modifier) {
+fun SmallInput(
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    isReadOnly: Boolean,
+    modifier: Modifier = Modifier
+) {
     Box(
         modifier = modifier.height(35.dp).background(Color(0xFF121212), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp),
         contentAlignment = Alignment.Center

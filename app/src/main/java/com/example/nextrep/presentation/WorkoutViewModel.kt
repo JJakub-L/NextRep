@@ -28,6 +28,103 @@ class WorkoutViewModel(private val dao: WorkoutDao) : ViewModel() {
             initialValue = 0
         )
 
+    val progressCards: StateFlow<List<TrainingProgressCard>> = dao.getAllPlans()
+        .map { allWorkouts ->
+            val completed = allWorkouts.filter { it.isCompleted && it.completionDate != null }
+            val now = System.currentTimeMillis()
+            val dayMs = 24 * 60 * 60 * 1000L
+
+            completed.groupBy { it.name }.map { (name, history) ->
+                val latestWorkout = history.maxBy { it.completionDate!! }
+                
+                val exerciseComparisons = latestWorkout.exercises.map { exercise ->
+                    ExerciseComparison(
+                        exerciseName = exercise.name,
+                        todayMax = getBestVolumeInPeriod(exercise.name, allWorkouts, dayStart(now), now),
+                        weekAgoMax = getBestVolumeInPeriod(exercise.name, allWorkouts, dayStart(now - 8 * dayMs), dayStart(now - 6 * dayMs)),
+                        monthAgoMax = getBestVolumeInPeriod(exercise.name, allWorkouts, dayStart(now - 32 * dayMs), dayStart(now - 28 * dayMs))
+                    )
+                }
+                TrainingProgressCard(trainingName = name, exercises = exerciseComparisons)
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val weeklyChartData: StateFlow<List<WeeklyChartPoint>> = dao.getAllPlans()
+        .map { allWorkouts ->
+            val now = System.currentTimeMillis()
+            val dayMs = 24 * 60 * 60 * 1000L
+            val calendar = Calendar.getInstance()
+            val polishDays = listOf("Nd", "Pon", "Wt", "Śr", "Czw", "Pt", "Sob")
+
+            (6 downTo 0).map { i ->
+                val targetDate = dayStart(now - i * dayMs)
+                calendar.timeInMillis = targetDate
+                
+                val totalVol = allWorkouts
+                    .filter { it.isCompleted && it.completionDate != null && dayStart(it.completionDate!!) == targetDate }
+                    .sumOf { it.totalScore }
+
+                WeeklyChartPoint(
+                    dayName = polishDays[calendar.get(Calendar.DAY_OF_WEEK) - 1],
+                    totalVolume = totalVol,
+                    timestamp = targetDate
+                )
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val exerciseProgress = workoutPlans.map { workouts ->
+        val completed = workouts.filter { it.isCompleted && it.completionDate != null }
+        
+        val allPerformedExercises = completed.flatMap { workout ->
+            workout.exercises.map { exercise ->
+                val bestSetScore = exercise.sets
+                    .filter { it.isCompleted }
+                    .maxOfOrNull { (it.weightInput.toDoubleOrNull() ?: 0.0) * (it.repsInput.toIntOrNull() ?: 0) } ?: 0.0
+                
+                ExerciseOccurrence(
+                    name = exercise.name,
+                    date = workout.completionDate!!,
+                    bestScore = bestSetScore
+                )
+            }
+        }
+
+        allPerformedExercises.groupBy { it.name }.mapValues { (_, occurrences) ->
+            val now = System.currentTimeMillis()
+            
+            ExerciseStats(
+                today = getBestVolumeInPeriod(occurrences.first().name, workouts, dayStart(now), now),
+                lastWeek = getBestVolumeInPeriod(occurrences.first().name, workouts, dayStart(now - 7 * 24 * 60 * 60 * 1000L), dayStart(now)),
+                lastMonth = getBestVolumeInPeriod(occurrences.first().name, workouts, dayStart(now - 30 * 24 * 60 * 60 * 1000L), dayStart(now - 7 * 24 * 60 * 60 * 1000L)),
+                historyForChart = occurrences.sortedBy { it.date }.map { it.date to it.bestScore }
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    val todaysProgress = workoutPlans.map { workouts ->
+        val todayStart = dayStart(System.currentTimeMillis())
+        val todaysWorkouts = workouts.filter { it.isCompleted && it.completionDate!! >= todayStart }
+
+        todaysWorkouts.flatMap { workout ->
+            workout.exercises.map { exercise ->
+                val completedSets = exercise.sets.filter { it.isCompleted }
+                
+                val volumes = completedSets.map { 
+                    (it.weightInput.toDoubleOrNull() ?: 0.0) * (it.repsInput.toIntOrNull() ?: 0) 
+                }
+
+                TodayExerciseStats(
+                    name = exercise.name,
+                    bestResult = volumes.maxOrNull() ?: 0.0,
+                    averageResult = if (volumes.isNotEmpty()) volumes.average() else 0.0
+                )
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _summaryData = MutableStateFlow<List<ExerciseComparison>?>(null)
+    val summaryData = _summaryData.asStateFlow()
+
     private val scoringStrategy: ScoringStrategy = VolumeStrategy()
 
     fun addWorkoutPlan(name: String, days: Set<DayOfWeek>, exercises: List<Exercise>, existingId: String? = null) {
@@ -36,16 +133,28 @@ class WorkoutViewModel(private val dao: WorkoutDao) : ViewModel() {
             name = name,
             dayDescription = days.joinToString(", ") { it.polishName },
             scheduledDays = days,
-            exercises = exercises.map { exercise ->
+            exercises = exercises.mapIndexed { exerciseIndex, exercise ->
                 val seriesCount = exercise.defaultSeries.toIntOrNull() ?: 0
-                // Zawsze tworzymy świeże zestawy dla planu, aby nie przenosić wyników z poprzednich treningów
-                val sets = (1..seriesCount).map { i ->
-                    ExerciseSet(
-                        setNumber = i,
-                        targetReps = exercise.defaultReps,
-                        targetRir = exercise.defaultRir
+                val isFirstExercise = exerciseIndex == 0
+                
+                val sets = mutableListOf<ExerciseSet>()
+                
+                if (isFirstExercise) {
+                    sets.add(ExerciseSet(setNumber = 1, type = SetType.WARMUP, targetReps = "15", targetRir = "0"))
+                    sets.add(ExerciseSet(setNumber = 2, type = SetType.WARMUP, targetReps = "10", targetRir = "0"))
+                }
+
+                val offset = if (isFirstExercise) 2 else 0
+                for (i in 1..seriesCount) {
+                    sets.add(
+                        ExerciseSet(
+                            setNumber = i + offset,
+                            targetReps = exercise.defaultReps,
+                            targetRir = exercise.defaultRir
+                        )
                     )
                 }
+
                 exercise.copy(
                     sets = sets,
                     isCompleted = false
@@ -131,12 +240,37 @@ class WorkoutViewModel(private val dao: WorkoutDao) : ViewModel() {
         }
     }
 
-    // Funkcja pomocnicza do pobierania planu na dziś z automatycznym resetem jeśli ukończony w innym dniu
+    fun finishAndGenerateSummary(workout: Workout) {
+        viewModelScope.launch {
+            val finishedWorkout = workout.copy(
+                isCompleted = true,
+                totalScore = scoringStrategy.calculateScore(workout),
+                completionDate = System.currentTimeMillis()
+            )
+            dao.insertWorkout(finishedWorkout)
+
+            val allWorkouts = dao.getAllPlans().first() 
+            val now = System.currentTimeMillis()
+
+            val summary = workout.exercises.map { exercise ->
+                ExerciseComparison(
+                    exerciseName = exercise.name,
+                    todayMax = getBestVolumeInPeriod(exercise.name, allWorkouts, dayStart(now), now),
+                    weekAgoMax = getBestVolumeInPeriod(exercise.name, allWorkouts, dayStart(now - 7 * 24 * 60 * 60 * 1000L), dayStart(now - 6 * 24 * 60 * 60 * 1000L)),
+                    monthAgoMax = getBestVolumeInPeriod(exercise.name, allWorkouts, dayStart(now - 31 * 24 * 60 * 60 * 1000L), dayStart(now - 27 * 24 * 60 * 60 * 1000L))
+                )
+            }
+
+            _summaryData.value = summary
+        }
+    }
+
+    fun clearSummary() { _summaryData.value = null }
+
     fun getWorkoutForToday(currentDay: DayOfWeek): Flow<Workout?> {
         return workoutPlans.map { workouts ->
             val workout = workouts.find { it.scheduledDays.contains(currentDay) }
             if (workout != null && workout.isCompleted && !isToday(workout.completionDate)) {
-                // Resetujemy stan treningu na nowy dzień
                 workout.copy(
                     isCompleted = false,
                     completionDate = null,
@@ -163,17 +297,36 @@ class WorkoutViewModel(private val dao: WorkoutDao) : ViewModel() {
                cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
     }
 
+    private fun getBestVolumeInPeriod(exerciseName: String, allWorkouts: List<Workout>, start: Long, end: Long): Double {
+        return allWorkouts
+            .filter { it.isCompleted && it.completionDate != null && it.completionDate!! in start..end }
+            .flatMap { it.exercises }
+            .filter { it.name == exerciseName }
+            .flatMap { it.sets }
+            .filter { it.isCompleted }
+            .maxOfOrNull { (it.weightInput.toDoubleOrNull() ?: 0.0) * (it.repsInput.toIntOrNull() ?: 0) } ?: 0.0
+    }
+
+    private fun dayStart(timestamp: Long): Long {
+        val cal = Calendar.getInstance().apply { timeInMillis = timestamp }
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
+    }
+
     private fun calculateStreak(workouts: List<Workout>): Int {
-        val completedDates = workouts
+        val completedDatesSet = workouts
             .filter { it.isCompleted && it.completionDate != null }
-            .map { it.completionDate!! }
-            .distinctBy {
-                val cal = Calendar.getInstance().apply { timeInMillis = it }
+            .map {
+                val cal = Calendar.getInstance().apply { timeInMillis = it.completionDate!! }
                 "${cal.get(Calendar.YEAR)}-${cal.get(Calendar.DAY_OF_YEAR)}"
             }
-            .sortedDescending()
+            .toSet()
 
-        if (completedDates.isEmpty()) return 0
+        val allScheduledDays = workouts.flatMap { it.scheduledDays }.toSet()
+        if (allScheduledDays.isEmpty() && completedDatesSet.isEmpty()) return 0
 
         var streak = 0
         val calendar = Calendar.getInstance()
@@ -181,21 +334,52 @@ class WorkoutViewModel(private val dao: WorkoutDao) : ViewModel() {
         calendar.set(Calendar.MINUTE, 0)
         calendar.set(Calendar.SECOND, 0)
         calendar.set(Calendar.MILLISECOND, 0)
-        var currentCheckDate = calendar.timeInMillis
 
-        for (date in completedDates) {
-            val diff = currentCheckDate - date
-            val daysDiff = TimeUnit.MILLISECONDS.toDays(diff)
+        for (i in 0 until 365) {
+            val dateKey = "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.DAY_OF_YEAR)}"
+            val dayOfWeek = calendarDayToDayOfWeek(calendar.get(Calendar.DAY_OF_WEEK))
+            val isScheduled = allScheduledDays.contains(dayOfWeek)
+            val isCompleted = completedDatesSet.contains(dateKey)
 
-            if (daysDiff <= 0) {
+            if (isCompleted) {
                 streak++
-            } else if (daysDiff <= 1) {
-                streak++
-                currentCheckDate = date
+            } else if (isScheduled) {
+                if (i > 0) {
+                    break 
+                }
             } else {
-                break
             }
+            calendar.add(Calendar.DAY_OF_YEAR, -1)
         }
+
         return streak
     }
+
+    private fun calendarDayToDayOfWeek(calendarDay: Int): DayOfWeek {
+        return when (calendarDay) {
+            Calendar.MONDAY -> DayOfWeek.MONDAY
+            Calendar.TUESDAY -> DayOfWeek.TUESDAY
+            Calendar.WEDNESDAY -> DayOfWeek.WEDNESDAY
+            Calendar.THURSDAY -> DayOfWeek.THURSDAY
+            Calendar.FRIDAY -> DayOfWeek.FRIDAY
+            Calendar.SATURDAY -> DayOfWeek.SATURDAY
+            Calendar.SUNDAY -> DayOfWeek.SUNDAY
+            else -> DayOfWeek.SUNDAY
+        }
+    }
 }
+
+data class ExerciseOccurrence(val name: String, val date: Long, val bestScore: Double)
+
+data class ExerciseStats(
+    val today: Double,
+    val lastWeek: Double,
+    val lastMonth: Double,
+    val historyForChart: List<Pair<Long, Double>>
+)
+
+data class TodayExerciseStats(
+    val name: String,
+    val bestResult: Double,
+    val averageResult: Double
+)

@@ -35,32 +35,34 @@ W `WorkoutViewModel` używamy `viewModelScope.launch`, aby wykonywać operacje n
 
 ---
 
-## 3. Podstawy Języka Kotlin w Projekcie
+## 3. Zarządzanie Stanem i UI (Jetpack Compose)
 
-### Tworzenie Zmiennych
-- `val` (Value): Stała (np. `id` w encji Room).
-- `var` (Variable): Zmienna (np. pola w `ExerciseSet`, które użytkownik edytuje podczas treningu).
-
-### System Stanów w Compose
+### A. System Stanów w Composable
 - **StateFlow:** Służy do przechowywania aktualnego stanu planów treningowych w ViewModelu.
 - **collectAsState():** Funkcja w Composable, która przekształca `Flow` w `State` zrozumiały dla Compose, wymuszając odświeżenie ekranu po zmianie danych w bazie.
 
+### B. Stabilność Formularzy (TextFieldValue)
+W celu uniknięcia problemu "skaczącego kursora" podczas reaktywnej aktualizacji bazy danych, zastosowano `TextFieldValue`. Pozwala to na oddzielenie stanu tekstu od stanu zaznaczenia i pozycji kursora, co zapewnia płynne wprowadzanie danych przez użytkownika.
+
+### C. Reaktywne Podsumowania
+Zastosowano mechanizm `remember(set.id)`, który gwarantuje, że stan lokalny pola tekstowego jest synchronizowany z modelem danych tylko wtedy, gdy faktycznie zmienia się kontekst serii treningowej.
+
 ---
 
-## 4. Zaawansowane Mechanizmy
+## 4. Zaawansowane Mechanizmy Logiczne
 
-### A. Data Classes & Room Entities
-Klasa `Workout` jest jednocześnie klasą danych Kotlina oraz encją bazy danych (`@Entity`). Pozwala to na uniknięcie duplikacji modeli i łatwe przesyłanie danych między warstwami aplikacji.
+### A. Obliczanie PR (Personal Record)
+Logika statystyk opiera się na funkcji `getBestVolumeInPeriod`, która przeszukuje historyczne dane treningowe w określonych oknach czasowych (dziś, tydzień temu, miesiąc temu). Pozwala to na dynamiczne generowanie kart postępów bez konieczności tworzenia ciężkich zapytań SQL.
 
-### B. Type Converters
-Ponieważ SQLite nie obsługuje natywnie list (np. listy ćwiczeń wewnątrz treningu), używamy `Converters.kt`. Wykorzystują one bibliotekę **GSON** do zamiany obiektów na tekst (JSON) przed zapisem do bazy i z powrotem na obiekty przy odczycie.
-
-### C. Wzorzec Strategia (Strategy Pattern)
+### B. Wzorzec Strategia (Strategy Pattern)
 Logika punktacji treningu jest odseparowana od reszty kodu. Dzięki temu możemy łatwo dodać nowe sposoby oceny postępów (np. punkty za regularność vs punkty za rekordy siłowe).
 
+### C. Automatyzacja Planu (WARMUP Logic)
+ViewModel automatycznie modyfikuje strukturę nowo tworzonych treningów, wstrzykując serie typu `WARMUP` do pierwszego ćwiczenia. Jest to zaimplementowane przy użyciu operacji na kolekcjach (`mapIndexed`), co separuje logikę "przygotowania treningu" od czystych modeli danych.
+
 ---
 
-## 5. Różnice między Kotlin a C# (Aktualizacja)
+## 5. Różnice między Kotlin a C#
 
 | Cecha | Kotlin | C# |
 | :--- | :--- | :--- |

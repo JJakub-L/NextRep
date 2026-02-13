@@ -34,7 +34,7 @@ Aplikacja wykorzystuje hierarchiczną strukturę danych do reprezentacji planu t
 ## 4. Wykorzystane Wzorce Projektowe i Mechanizmy
 
 ### A. DAO (Data Access Object)
-- **Teoria:** Wzorzec DAO oddziela logikę dostępu do danych od reszty aplikacji. Definiuje czysty interfejs API, przez który można komunikować się z bazą danych, ukrywając szczegóły implementacyjne (np. konkretne zapytania SQL).
+- **Teoria:** Wzorzec DAO oddziela logikę dostępu do danych od restzty aplikacji. Definiuje czysty interfejs API, przez który można komunikować się z bazą danych, ukrywając szczegóły implementacyjne (np. konkretne zapytania SQL).
 - **W projekcie:** Interfejs `WorkoutDao` w `app/src/main/java/com/example/nextrep/data/local/` definiuje metody takie jak `insertWorkout` i `getAllPlans`, zwracając dane jako `Flow`, co integruje go ze wzorcem Observer.
 
 ### B. Wzorzec Strategia (Strategy Pattern)
@@ -51,19 +51,39 @@ Aplikacja wykorzystuje hierarchiczną strukturę danych do reprezentacji planu t
 
 ---
 
-## 5. Struktura Modułów
+## 5. Logika Obliczania "Streak" (Ciąg treningowy)
+Aplikacja implementuje zaawansowaną logikę obliczania ciągłości treningowej:
+- **Pauza w Rest Day:** Streak nie resetuje się ani nie rośnie w dni, które nie są zaplanowane jako treningowe.
+- **Weryfikacja Planu:** System sprawdza `scheduledDays` we wszystkich planach użytkownika. Jeśli dzień jest planowany, a trening nie został ukończony, streak jest przerywany (z wyjątkiem bieżącego dnia).
+- **Automatyczny Reset:** Jeśli trening zostanie ukończony, system automatycznie przygotowuje świeżą sesję na następny zaplanowany dzień.
+
+---
+
+## 6. System Postępów i Statystyk
+Aplikacja oferuje rozbudowany system analizy wyników:
+- **Karty Porównawcze:** Dla każdego ćwiczenia generowane jest zestawienie najlepszego wyniku (PR) z dnia dzisiejszego, sprzed tygodnia oraz sprzed miesiąca.
+- **Wykres Tygodniowy:** Wizualizacja sumarycznej objętości treningowej (`Total Volume`) z ostatnich 7 dni, ułatwiająca śledzenie systematyczności.
+- **Metodologia PR:** Wynik obliczany jako `Ciężar × Powtórzenia` dla najlepszej serii w danej sesji.
+
+---
+
+## 7. Struktura Modułów
 - **:app**
     - `data/local/`: Konfiguracja Room (`AppDatabase.kt`, `WorkoutDao.kt`, `Converters.kt`).
-    - `domain/models/`: `TrainingModels.kt` - Definicje encji i modeli.
-    - `presentation/`: Ekrany (`MainScreen.kt`, `AddWorkoutScreen.kt`) i `WorkoutViewModel.kt`.
+    - `domain/models/`: `TrainingModels.kt`, `ProgressModels.kt` - Definicje encji i modeli danych.
+    - `presentation/`: Ekrany (`MainScreen.kt`, `ProgressScreen.kt`, `WorkoutScreenContent.kt`) i `WorkoutViewModel.kt`.
     - `ui/theme/`: Definicje wizualne (GorillaGreen, GymBlack).
 
 ---
 
-## 6. Status Rozwoju
-- [x] Implementacja bazy danych Room (z obsługą KSP).
+## 8. Status Rozwoju
+- [x] Implementacja bazy danych Room (z obsługą KSP i migracją).
 - [x] Reaktywne odświeżanie listy planów (Flow + collectAsState).
 - [x] Pełny kreator planów z zapisem do bazy.
 - [x] System edycji i usuwania planów.
 - [x] Obsługa treningów na czas i siłowych.
 - [x] Logika obliczania wyniku treningu (Strategy).
+- [x] Zaawansowany licznik "Streak" z obsługą dni wolnych (Rest Days).
+- [x] Nowy ekran "Postępy" z kartami PR i wykresem tygodniowym.
+- [x] Obsługa preserii (WARMUP) dla pierwszego ćwiczenia w treningu.
+- [x] Poprawiona obsługa pól tekstowych (TextFieldValue) zapobiegająca skakaniu kursora.
