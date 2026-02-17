@@ -117,4 +117,63 @@ class StreakCalculatorTest {
         val result = calculateStreak(completedWorkouts, testCurrentTime = today)
         assertEquals("Streak powinien wynosić 0 (lub zostać przerwany), bo Środa była planowana a nie zrobiona", 0, result)
     }
+
+    @Test
+    fun `test streak increases on consecutive days`() {
+        // Scenariusz: Trening w Poniedziałek i we Wtorek.
+        // Dzisiaj jest Wtorek.
+        val calendar = Calendar.getInstance()
+        
+        calendar.set(2023, Calendar.OCTOBER, 24) // Tuesday (2023-10-24)
+        val tuesday = calendar.timeInMillis
+        
+        calendar.set(2023, Calendar.OCTOBER, 23) // Monday (2023-10-23)
+        val monday = calendar.timeInMillis
+
+        val workoutPlan = Workout(
+            name = "Test Plan",
+            dayDescription = "",
+            scheduledDays = setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY)
+        )
+
+        val completedWorkouts = listOf(
+            workoutPlan.copy(isCompleted = true, completionDate = monday),
+            workoutPlan.copy(isCompleted = true, completionDate = tuesday)
+        )
+
+        val result = calculateStreak(completedWorkouts, testCurrentTime = tuesday)
+        assertEquals("Streak powinien wynosić 2 po ukończeniu treningów dzień po dniu", 2, result)
+    }
+
+    @Test
+    fun `test streak with different workout plans on consecutive days`() {
+        // Scenariusz: Trening A w Poniedziałek, Trening B we Wtorek.
+        // Dzisiaj jest Wtorek.
+        val calendar = Calendar.getInstance()
+        
+        calendar.set(2023, Calendar.OCTOBER, 24) // Tuesday
+        val tuesday = calendar.timeInMillis
+        
+        calendar.set(2023, Calendar.OCTOBER, 23) // Monday
+        val monday = calendar.timeInMillis
+
+        val planA = Workout(
+            name = "Trening A",
+            dayDescription = "",
+            scheduledDays = setOf(DayOfWeek.MONDAY)
+        )
+        val planB = Workout(
+            name = "Trening B",
+            dayDescription = "",
+            scheduledDays = setOf(DayOfWeek.TUESDAY)
+        )
+
+        val completedWorkouts = listOf(
+            planA.copy(isCompleted = true, completionDate = monday),
+            planB.copy(isCompleted = true, completionDate = tuesday)
+        )
+
+        val result = calculateStreak(completedWorkouts, testCurrentTime = tuesday)
+        assertEquals("Streak powinien wynosić 2 przy różnych planach wykonanych dzień po dniu", 2, result)
+    }
 }

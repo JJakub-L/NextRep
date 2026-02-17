@@ -41,8 +41,18 @@ class WorkoutViewModel(private val dao: WorkoutDao) : ViewModel() {
                     ExerciseComparison(
                         exerciseName = exercise.name,
                         todayMax = getBestVolumeInPeriod(exercise.name, allWorkouts, dayStart(now), now),
-                        weekAgoMax = getBestVolumeInPeriod(exercise.name, allWorkouts, dayStart(now - 8 * dayMs), dayStart(now - 6 * dayMs)),
-                        monthAgoMax = getBestVolumeInPeriod(exercise.name, allWorkouts, dayStart(now - 32 * dayMs), dayStart(now - 28 * dayMs))
+                        weekAgoMax = getBestVolumeInPeriod(
+                            exercise.name,
+                            allWorkouts,
+                            dayStart(now - 7 * dayMs),
+                            dayStart(now) - 1
+                        ),
+                        monthAgoMax = getBestVolumeInPeriod(
+                            exercise.name,
+                            allWorkouts,
+                            dayStart(now - 30 * dayMs),
+                            dayStart(now - 8 * dayMs)
+                        )
                     )
                 }
                 TrainingProgressCard(trainingName = name, exercises = exerciseComparisons)
@@ -297,7 +307,24 @@ class WorkoutViewModel(private val dao: WorkoutDao) : ViewModel() {
                cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
     }
 
+
     private fun getBestVolumeInPeriod(exerciseName: String, allWorkouts: List<Workout>, start: Long, end: Long): Double {
+        return allWorkouts
+            .filter { it.isCompleted && it.completionDate != null && it.completionDate!! in start..end }
+            .flatMap { it.exercises }
+            .filter { it.name == exerciseName }
+            .flatMap { it.sets }
+            // Poprawka: bierzemy pod uwagę serię, jeśli ma wpisane dane (nawet bez isCompleted)
+            .filter { it.weightInput.isNotBlank() && it.repsInput.isNotBlank() }
+            .maxOfOrNull {
+                val weightCleaned = it.weightInput.replace(',', '.')
+                val w = weightCleaned.toDoubleOrNull() ?: 0.0
+                val r = it.repsInput.toIntOrNull() ?: 0
+                w * r
+            } ?: 0.0
+    }
+
+    /*private fun getBestVolumeInPeriod(exerciseName: String, allWorkouts: List<Workout>, start: Long, end: Long): Double {
         return allWorkouts
             .filter { it.isCompleted && it.completionDate != null && it.completionDate!! in start..end }
             .flatMap { it.exercises }
@@ -305,7 +332,7 @@ class WorkoutViewModel(private val dao: WorkoutDao) : ViewModel() {
             .flatMap { it.sets }
             .filter { it.isCompleted }
             .maxOfOrNull { (it.weightInput.toDoubleOrNull() ?: 0.0) * (it.repsInput.toIntOrNull() ?: 0) } ?: 0.0
-    }
+    }*/
 
     private fun dayStart(timestamp: Long): Long {
         val cal = Calendar.getInstance().apply { timeInMillis = timestamp }

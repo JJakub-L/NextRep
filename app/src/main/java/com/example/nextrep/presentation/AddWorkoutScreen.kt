@@ -1,5 +1,6 @@
 package com.example.nextrep.presentation
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -107,9 +108,9 @@ fun AddWorkoutScreen(viewModel: WorkoutViewModel) {
                         selectedDays.clear()
                         exercises.clear()
                         editingWorkoutId = null
-                        android.widget.Toast.makeText(context, "Zapisano zmiany!", android.widget.Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Zapisano zmiany!", Toast.LENGTH_SHORT).show()
                     } else {
-                        android.widget.Toast.makeText(context, "Uzupełnij nazwę, dni i ćwiczenia!", android.widget.Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Uzupełnij nazwę, dni i ćwiczenia!", Toast.LENGTH_SHORT).show()
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(55.dp),
@@ -144,8 +145,32 @@ fun AddWorkoutScreen(viewModel: WorkoutViewModel) {
 
         // Używamy zaobserwowanej listy planów
         items(workoutPlans) { plan ->
+            var showDeleteDialog by remember { mutableStateOf(false) }
+
+            if (showDeleteDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteDialog = false },
+                    title = { Text("Usuwanie planu") },
+                    text = { Text("Czy na pewno chcesz usunąć plan \"${plan.name}\"?") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            viewModel.removeWorkoutPlan(plan)
+                            showDeleteDialog = false
+                            Toast.makeText(context, "Plan usunięty", Toast.LENGTH_SHORT).show()
+                        }) {
+                            Text("USUŃ", color = Color.Red)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteDialog = false }) {
+                            Text("ANULUJ")
+                        }
+                    }
+                )
+            }
+
             Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 colors = CardDefaults.cardColors(containerColor = GymCard.copy(alpha = 0.6f))
             ) {
                 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -153,6 +178,7 @@ fun AddWorkoutScreen(viewModel: WorkoutViewModel) {
                         Text(plan.name, fontWeight = FontWeight.Bold, color = Color.White)
                         Text(plan.dayDescription, color = GorillaGreen, fontSize = 12.sp)
                     }
+                    
                     TextButton(onClick = {
                         workoutName = plan.name
                         editingWorkoutId = plan.id
@@ -162,6 +188,10 @@ fun AddWorkoutScreen(viewModel: WorkoutViewModel) {
                         exercises.addAll(plan.exercises.map { it.copy() })
                     }) {
                         Text("EDYTUJ", color = Color.Yellow)
+                    }
+
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Usuń plan", tint = Color.Red.copy(alpha = 0.7f))
                     }
                 }
             }
