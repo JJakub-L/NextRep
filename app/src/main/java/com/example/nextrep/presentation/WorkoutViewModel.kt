@@ -13,6 +13,11 @@ import java.util.concurrent.TimeUnit
 
 class WorkoutViewModel(private val dao: WorkoutDao) : ViewModel() {
 
+    /*
+      WZORZEC PROJEKTOWY: OBSERWATOR (Observer Pattern) - Część 1: Subject (Podmiot)
+      Wykorzystujemy StateFlow jako strumień danych, który "emituje" aktualny stan planów treningowych.
+      Każda zmiana w bazie danych Room zostanie automatycznie rozesłana do wszystkich subskrybentów (UI).
+     */
     val workoutPlans: StateFlow<List<Workout>> = dao.getAllPlans()
         .stateIn(
             scope = viewModelScope,
@@ -307,24 +312,7 @@ class WorkoutViewModel(private val dao: WorkoutDao) : ViewModel() {
                cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
     }
 
-
     private fun getBestVolumeInPeriod(exerciseName: String, allWorkouts: List<Workout>, start: Long, end: Long): Double {
-        return allWorkouts
-            .filter { it.isCompleted && it.completionDate != null && it.completionDate!! in start..end }
-            .flatMap { it.exercises }
-            .filter { it.name == exerciseName }
-            .flatMap { it.sets }
-            // Poprawka: bierzemy pod uwagę serię, jeśli ma wpisane dane (nawet bez isCompleted)
-            .filter { it.weightInput.isNotBlank() && it.repsInput.isNotBlank() }
-            .maxOfOrNull {
-                val weightCleaned = it.weightInput.replace(',', '.')
-                val w = weightCleaned.toDoubleOrNull() ?: 0.0
-                val r = it.repsInput.toIntOrNull() ?: 0
-                w * r
-            } ?: 0.0
-    }
-
-    /*private fun getBestVolumeInPeriod(exerciseName: String, allWorkouts: List<Workout>, start: Long, end: Long): Double {
         return allWorkouts
             .filter { it.isCompleted && it.completionDate != null && it.completionDate!! in start..end }
             .flatMap { it.exercises }
@@ -332,7 +320,7 @@ class WorkoutViewModel(private val dao: WorkoutDao) : ViewModel() {
             .flatMap { it.sets }
             .filter { it.isCompleted }
             .maxOfOrNull { (it.weightInput.toDoubleOrNull() ?: 0.0) * (it.repsInput.toIntOrNull() ?: 0) } ?: 0.0
-    }*/
+    }
 
     private fun dayStart(timestamp: Long): Long {
         val cal = Calendar.getInstance().apply { timeInMillis = timestamp }

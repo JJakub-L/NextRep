@@ -6,6 +6,11 @@ import com.example.nextrep.domain.models.DayOfWeek
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
+/*
+  WZORZEC PROJEKTOWY: ADAPTER (Type Converters)
+  Adaptuje złożone obiekty Kotlinowe (Listy, Set-y) do formatu bazy danych SQLite (String/JSON).
+  Dzięki temu Room może przechowywać struktury, których natywnie nie obsługuje.
+ */
 class Converters {
     private val gson = Gson()
 
