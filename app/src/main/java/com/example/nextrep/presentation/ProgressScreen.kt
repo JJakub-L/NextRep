@@ -39,13 +39,13 @@ fun ProgressScreen(viewModel: WorkoutViewModel) {
                 )
             }
 
-            // GÓRA: Karty porównawcze (Krok 3)
+            // GÓRA: Karty porównawcze
             items(progressCards) { card ->
                 TrainingProgressCard(card)
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // ŚRODEK: Wykres (Krok 4)
+            // ŚRODEK: Wykres
             item {
                 Text(
                     "Aktywność Tygodniowa",
@@ -57,7 +57,7 @@ fun ProgressScreen(viewModel: WorkoutViewModel) {
                 WeeklyProgressChart(weeklyData)
             }
 
-            // DÓŁ: Wyjaśnienie (Krok 5)
+            // DÓŁ: Wyjaśnienie
             item {
                 CalculationInfoSection()
             }
@@ -70,7 +70,7 @@ fun CalculationInfoSection() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 24.dp, bottom = 40.dp) // Większy margines na dole dla oddechu
+            .padding(top = 24.dp, bottom = 40.dp)
             .background(Color(0xFF252525), RoundedCornerShape(16.dp))
             .padding(16.dp)
     ) {
@@ -97,7 +97,6 @@ fun CalculationInfoSection() {
             description = "To najwyższa objętość uzyskana w pojedynczej serii w danym dniu."
         )
         
-        // Wzór matematyczny
         Text(
             text = "Wynik = Ciężar × Powtórzenia",
             color = Color(0xFF557D45),
@@ -122,15 +121,12 @@ fun MethodologyItem(title: String, description: String) {
 
 @Composable
 fun WeeklyProgressChart(weeklyData: List<WeeklyChartPoint>) {
-    // 1. Znajdujemy najwyższy wynik w tygodniu, żeby wiedzieć jak skalować słupki
     val maxVolume = weeklyData.maxOfOrNull { it.totalVolume }?.takeIf { it > 0 } ?: 1.0
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFD9D9D9)) // Ten sam szary co karty
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFD9D9D9))
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -144,18 +140,16 @@ fun WeeklyProgressChart(weeklyData: List<WeeklyChartPoint>) {
                 modifier = Modifier.padding(bottom = 20.dp)
             )
 
-            // Kontener na słupki
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp), // Zwiększona wysokość, aby pomieścić etykiety "k"
+                    .height(180.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.Bottom
             ) {
                 weeklyData.forEach { point ->
                     BarItem(
                         point = point,
-                        // Obliczamy wysokość procentową względem najlepszego dnia
                         heightPercentage = (point.totalVolume / maxVolume).toFloat()
                     )
                 }
@@ -167,14 +161,14 @@ fun WeeklyProgressChart(weeklyData: List<WeeklyChartPoint>) {
 @Composable
 fun RowScope.BarItem(point: WeeklyChartPoint, heightPercentage: Float) {
     Column(
-        modifier = Modifier.weight(1f),
+        modifier = Modifier.weight(1f).fillMaxHeight(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Bottom
     ) {
-        // Wartość nad słupkiem (tylko jeśli > 0)
+        // Wartość nad słupkiem
         if (point.totalVolume > 0) {
             Text(
-                text = "${(point.totalVolume / 1000).toInt()}k", // Skrót do np. 5k (5000kg)
+                text = "${(point.totalVolume / 1000).toInt()}k",
                 fontSize = 9.sp,
                 color = Color(0xFF557D45),
                 fontWeight = FontWeight.Bold
@@ -183,20 +177,25 @@ fun RowScope.BarItem(point: WeeklyChartPoint, heightPercentage: Float) {
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Słupek
+        // Kontener na słupek (Fix: ten Box zajmuje resztę miejsca i trzyma słupek na dole)
         Box(
-            modifier = Modifier
-                .fillMaxHeight(heightPercentage.coerceIn(0.05f, 1f)) // Minimalna wysokość 5% dla widoczności
-                .width(24.dp)
-                .background(
-                    color = if (point.totalVolume > 0) Color(0xFF557D45) else Color.LightGray.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
-                )
-        )
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight(heightPercentage.coerceIn(0.05f, 1f))
+                    .width(24.dp)
+                    .background(
+                        color = if (point.totalVolume > 0) Color(0xFF557D45) else Color.LightGray.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
+                    )
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Skrót dnia (Pon, Wt, itp.)
+        // Dzień tygodnia (Teraz zawsze na dole)
         Text(
             text = point.dayName,
             fontSize = 10.sp,
@@ -211,13 +210,12 @@ fun TrainingProgressCard(card: TrainingProgressCard) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFD9D9D9)) // Jasny szary
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFD9D9D9))
     ) {
         Column {
-            // Nagłówek (Zielony pasek)
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color(0xFF557D45), // Ciemna zieleń
+                color = Color(0xFF557D45),
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
             ) {
                 Text(
@@ -229,11 +227,9 @@ fun TrainingProgressCard(card: TrainingProgressCard) {
                 )
             }
 
-            // Lista ćwiczeń wewnątrz planu
             Column(modifier = Modifier.padding(16.dp)) {
                 card.exercises.forEachIndexed { index, exercise ->
                     ExerciseComparisonRow(exercise)
-                    // Dodaj kreskę oddzielającą (jeśli nie jest to ostatnie ćwiczenie)
                     if (index < card.exercises.lastIndex) {
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 12.dp),
